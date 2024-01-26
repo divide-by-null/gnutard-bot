@@ -2,6 +2,7 @@ package dev.haarolean.gnutardbot.abilities;
 
 import dev.haarolean.gnutardbot.TardBot;
 import dev.haarolean.gnutardbot.util.MemberUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.telegram.abilitybots.api.objects.*;
@@ -14,6 +15,7 @@ import static org.telegram.abilitybots.api.util.AbilityUtils.isUserMessage;
 
 @Component
 @Scope(SCOPE_PROTOTYPE)
+@Slf4j
 public class CheckLinksAbility implements AbilityProvider {
 
     private final MemberUtils memberUtils;
@@ -55,7 +57,11 @@ public class CheckLinksAbility implements AbilityProvider {
 
         if (bot.isAdmin(senderId)) return;
         if (bot.isGroupAdmin(ctx.update(), senderId)) return;
-        if (memberUtils.isUserKnown(chatId, senderId)) return;
+        var userKnown = memberUtils.isUserKnown(chatId, senderId);
+
+        log.info("User known?: [{}]", userKnown);
+
+        if (userKnown) return;
 
         var hasLink = message.getText().matches("https?://.*");
 
