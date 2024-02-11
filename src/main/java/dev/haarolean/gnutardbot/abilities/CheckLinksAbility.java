@@ -3,6 +3,7 @@ package dev.haarolean.gnutardbot.abilities;
 import dev.haarolean.gnutardbot.TardBot;
 import dev.haarolean.gnutardbot.util.MemberUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import org.telegram.abilitybots.api.objects.*;
@@ -51,6 +52,9 @@ public class CheckLinksAbility implements AbilityProvider {
 
     private void checkLinks(MessageContext ctx) {
         var message = ctx.update().getMessage();
+        if (message == null) message = ctx.update().getEditedMessage();
+        if (message == null) return;
+
         var sender = message.getFrom();
         long senderId = sender.getId();
         var chatId = message.getChatId().toString();
@@ -63,14 +67,14 @@ public class CheckLinksAbility implements AbilityProvider {
 
         if (userKnown) return;
 
-        var hasLink = message.getText().matches("https?://.*");
+        var hasLink = message.getText().matches(".*https?://.*");
 
         if (!hasLink) return;
 
         var messageText = "Yo nibba, you triggered an anti spam thingy. " +
                 "No links are allowed if you're not in the chat group. " +
                 "Contact the admins if you're not a bot.";
-        var senderTag = !sender.getUserName().isEmpty() ? ("@" + sender.getUserName() + " ") : "";
+        var senderTag = StringUtils.isNotEmpty(sender.getUserName()) ? ("@" + sender.getUserName() + " ") : "";
         var replyMessage = bot.silent().forceReply(senderTag + messageText, message.getChatId());
 
         var banRequest = BanChatMember
@@ -79,6 +83,7 @@ public class CheckLinksAbility implements AbilityProvider {
                 .userId(senderId)
                 .build();
 
+        bot.silent().execute(new DeleteMessage(chatId, message.getMessageId()));
         bot.silent().execute(banRequest);
         replyMessage.ifPresent(msg ->
                 bot.silent().execute(new DeleteMessage(chatId, msg.getMessageId())));
